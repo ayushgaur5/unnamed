@@ -1,0 +1,25 @@
+{
+  "name": "unnamed",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ayushgaur5/unnamed.git"
+  },
+  "author": "Ayush Gaur",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ayushgaur5/unnamed/issues"
+  },
+  "homepage": "https://github.com/ayushgaur5/unnamed#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "express": "^4.16.3",
+    "jwt-simple": "^0.5.1",
+    "morgan": "^1.9.0"
+  }
+}
