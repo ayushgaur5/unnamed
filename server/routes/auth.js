@@ -1,8 +1,26 @@
 var jwt = require('jwt-simple');
  
 var auth = {
+
+  signup: function(req, res, next) {
+    
+    try
+    {
+      const db = req.app.locals.db;
+      db.collection("test").insert({"hello":"world"});
+      console.log(db.collection("test").find());
+    }
+    catch(err){
+      next(err);
+    }
+  }
+}
+
+function validateSignUpFields(input) {
+  validateEmailAddress(input.emailaddress)
+}
  
-  login: function(req, res) {
+  /*signin: function(req, res, next) {
  
     var username = req.body.username || '';
     var password = req.body.password || '';
@@ -79,5 +97,5 @@ function expiresIn(numDays) {
   var dateObj = new Date();
   return dateObj.setDate(dateObj.getDate() + numDays);
 }
- 
+ */
 module.exports = auth;

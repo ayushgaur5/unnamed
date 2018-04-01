@@ -17,8 +17,10 @@
   },
   "homepage": "https://github.com/ayushgaur5/unnamed#readme",
   "dependencies": {
+    "bcrypt": "^1.0.3",
     "body-parser": "^1.18.2",
     "express": "^4.16.3",
+    "jasmine": "^3.1.0",
     "jwt-simple": "^0.5.1",
     "mongodb": "^3.0.5",
     "morgan": "^1.9.0"
