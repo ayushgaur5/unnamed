@@ -1,10 +1,10 @@
 var express = require('express');
 var logger = require('morgan');
 var bodyParser = require('body-parser');
+var mongoClient = require('mongodb').MongoClient;
 var env = process.env.NODE_ENV || 'development';
 var config = require('./config/config')[env];
 var app = express();
-var mongoUtil = require('./utils/mongoUtil');
 const url = `mongodb://${config.database.user + ':' + encodeURIComponent(config.database.pwd)}@localhost:${config.database.port}/${config.database.db}`;
 
 app.use(logger('dev'));
@@ -43,15 +43,19 @@ app.use(function (req, res, next) {
 // Error handling middleware
 app.use(require('./middlewares/errorHandler'));
 
+// log the unhandled promise rejection
 process.on('unhandledRejection', function(reason, promise) {
   console.log(promise);
 });
 
 // Establish connection to MongoDB server
-mongoUtil.connectToServer(url, function (err) {
+mongoClient.connect(url, function (err, client) {
   if (err) throw err;
+
   console.log("Connected successfully to MongoDB server");
-  app.locals.db = mongoUtil.getDb().db(config.database.db);
+  let db = client.db(config.database.db);
+  app.locals.db = db;
+
   app.listen(config.server.port, function () {
     console.log('Express server listening on port ' + config.server.port);
   });
