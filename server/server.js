@@ -1,7 +1,7 @@
 var express = require('express');
 var logger = require('morgan');
 var bodyParser = require('body-parser');
-var mongoClient = require('mongodb').MongoClient;
+var MongoClient = require('mongodb').MongoClient;
 var env = process.env.NODE_ENV || 'development';
 var config = require('./config/config')[env];
 var app = express();
@@ -44,19 +44,21 @@ app.use(function (req, res, next) {
 app.use(require('./middlewares/errorHandler'));
 
 // log the unhandled promise rejection
-process.on('unhandledRejection', function(reason, promise) {
-  console.log(promise);
-});
+//process.on('unhandledRejection', function (reason, promise) {
+//  console.log(promise);
+//});
 
 // Establish connection to MongoDB server
-mongoClient.connect(url, function (err, client) {
-  if (err) throw err;
-
+MongoClient.connect(url).then(function(client){
   console.log("Connected successfully to MongoDB server");
   let db = client.db(config.database.db);
+  db.collection("users").ensureIndex({ "emailAddress": 1 }, { unique: true });
+  db.collection("users").ensureIndex({ "mobileNumber": 1 }, { unique: true });
   app.locals.db = db;
 
   app.listen(config.server.port, function () {
     console.log('Express server listening on port ' + config.server.port);
   });
+}).catch(function(reason) {
+  console.log(reason);
 });

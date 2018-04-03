@@ -1,36 +1,85 @@
-/*var bcrypt = require('bcrypt');
+var validate = require('../helpers/validate');
+var bcrypt = require('bcrypt');
 
-var userSchema = new Schema({
-    firstname: { type: String, maxlength: 100 },
-    lastname: { tpe: String, maxlength: 100 },
-    mobile: { type: Number, unique: true, min: 10, max: 10 },
-    email_address: { type: String },
-    password: { type: String, minlength: 8, maxlength: 64 },
-    addresses: [{
-        longitude: Schema.Types.Decimal128,
-        latittude: Schema.Types.Decimal128,
-        line1: string,
-        line2: string,
-        city: string,
-        state: string,
-        pincode: { type: Number, min: 6, max: 6 }
-    }]
-});
+/**
+ * User Document fields:
+ * firstName,
+ * lastName,
+ * emailAddress,
+ * mobileNumber,
+ * password,
+ * 
+ * <<UPDATE if adding new field>>
+ SAMPLE :
+ {
+     "firstName": "ayush",
+     "email": "ayush@gmail.com",
+     "mobile": "8726121321",
+     "password": "Password"
+ }
+ */
 
-// hash the password
-userSchema.methods.generateHash = function (password) {
+function User(db, doc) {
+    var query;
+    if (!validate.isEmptyOrNull(doc.mobileNumber || doc.mobile)) {
+        query = { mobileNumber: doc.mobileNumber.trim() || doc.mobile.trim() };
+    }
+    if (!validate.isEmptyOrNull(doc.emailAddress || doc.email)) {
+        query = { emailAddress: doc.emailAddress.trim() || doc.email.trim() };
+    }
+    try {
+        db.collection('users').findOne(query).toArray(function (err, result) {
+            if (err) throw err;
+            console.log(result);
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+}
+
+// Start: Object Properties and methods
+User.prototype.validatePassword = function (password) {
+    return bcrypt.compareSync(this.doc.encryptedpassword);
+}
+// End: Object Properties and methods
+
+// Start: Static functions
+User.create = function (db, userDoc) {
+    var result;
+
+    db.collection('users').insertOne(userDoc).then(function (result) {
+        console.log("Insert successful: " + result);
+        result = { success: true };
+    }).catch(function (reason) {
+        result = { err: 'DB_INS_ERR: ' + reason };
+    });
+
+    return result;
+}
+
+User.validateAndGenerateDocument = function (input) {
+    var errors = [];
+
+    var doc = {
+        firstName: validate.firstName(input.firstName, errors),
+        lastName: validate.lastName(input.lastName, errors),
+        emailAddress: validate.lastName(input.emailAddress || input.email, errors),
+        mobileNumber: validate.mobileNumber(input.mobileNumber || input.mobile, errors),
+        password: User.getEncryptedPassword(validate.password(input.password || input.pwd, errors))
+    };
+
+    if (errors.length > 0) {
+        return { err: errors.toString() };
+    }
+    else {
+        return doc;
+    }
+}
+
+User.getEncryptedPassword = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
-};
+}
+// End: static functions
 
-// checking if password is valid
-userSchema.methods.validPassword = function (password) {
-    return bcrypt.compareSync(password, this.password);
-};
-
-userSchema.virtual('full_name').get(function () {
-    return this.firstname + ' ' + this.lastname;
-});
-
-var User = mongoose.model('user', userSchema);
 module.exports = User;
-*/
