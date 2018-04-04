@@ -19,7 +19,7 @@ module.exports = {
             errors.push("EmailAddress");
             return '';
         }
-        return emailAddress.trim();
+        return email.trim();
     },
 
     mobileNumber: function (number, errors) {

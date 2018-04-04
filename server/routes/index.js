@@ -8,8 +8,9 @@ var auth = require('./auth.js');
 /*
  * Routes that can be accessed by any one
  */
-//router.post('/sigin', auth.signin);
+router.post('/signin', auth.signin);
 router.post('/signup', auth.signup);
+router.post('/signout', auth.signout);
 
 /*
  * Routes that can be accessed only by autheticated users

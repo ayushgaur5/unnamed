@@ -1,5 +1,6 @@
 var validate = require('../helpers/validate');
 var bcrypt = require('bcrypt');
+var jwt = require('jwt-simple');
 
 /**
  * User Document fields:
@@ -12,74 +13,104 @@ var bcrypt = require('bcrypt');
  * <<UPDATE if adding new field>>
  SAMPLE :
  {
-     "firstName": "ayush",
-     "email": "ayush@gmail.com",
-     "mobile": "8726121321",
-     "password": "Password"
+	 "firstName": "ayush",
+	 "emailAddress": "ayush@gmail.com",
+	 "mobileNumber": "8726121321",
+	 "password": "Password"
  }
  */
 
-function User(db, doc) {
-    var query;
-    if (!validate.isEmptyOrNull(doc.mobileNumber || doc.mobile)) {
-        query = { mobileNumber: doc.mobileNumber.trim() || doc.mobile.trim() };
-    }
-    if (!validate.isEmptyOrNull(doc.emailAddress || doc.email)) {
-        query = { emailAddress: doc.emailAddress.trim() || doc.email.trim() };
-    }
-    try {
-        db.collection('users').findOne(query).toArray(function (err, result) {
-            if (err) throw err;
-            console.log(result);
-        });
-    }
-    catch (err) {
-        next(err);
-    }
+function User(userDoc) {
+    this.userDoc = userDoc;
+    this.token = this.genToken();
 }
 
 // Start: Object Properties and methods
 User.prototype.validatePassword = function (password) {
     return bcrypt.compareSync(this.doc.encryptedpassword);
 }
+
+User.prototype.genToken = function () {
+    var expires = expiresIn(7); // 7 days
+    var token = jwt.encode({
+        exp: expires
+    }, require('../config/secret')());
+
+    return {
+        token: token,
+        expires: expires,
+        user: this.userDoc
+    };
+}
 // End: Object Properties and methods
 
 // Start: Static functions
-User.create = function (db, userDoc) {
-    var result;
+User.signIn = (db, doc) => {
+    return new Promise(function (resolve, reject) {
+        if (!doc.password || (!doc.emailAddress && !doc.mobileNumber)) {
+            reject('Invalid request, Please send emailAddress/mobileNumber and password to sign in.');
+        }
 
-    db.collection('users').insertOne(userDoc).then(function (result) {
-        console.log("Insert successful: " + result);
-        result = { success: true };
-    }).catch(function (reason) {
-        result = { err: 'DB_INS_ERR: ' + reason };
+        var projection = { projection: { _id: 0, password: 0 } };
+
+        if (doc.emailAddress) {
+            db.collection('users').findOne({ emailAddress: doc.emailAddress }, projection)
+                .then((result) => resolve(new User(result)))
+                .catch((reason) => reject(reason));
+        }
+        else if (doc.mobileNumber) {
+            db.collection('users').findOne({ mobileNumber: doc.mobileNumber }, projection)
+                .then((result) => resolve(new User(result)))
+                .catch((reason) => reject(reason));
+        }
     });
+}
 
-    return result;
+User.signOut = function (input) {
+    if(!doc.mobileNumber) {
+        reject('Invalid request, Please send mobileNumber to sign out.');
+    }
+    resolve();
+}
+
+User.create = function (db, userDoc) {
+    return new Promise(function (resolve, reject) {
+        db.collection('users').insertOne(userDoc)
+            .then((result) => resolve(result))
+            .catch((reason) => reject(reason));
+    });
 }
 
 User.validateAndGenerateDocument = function (input) {
-    var errors = [];
+    return new Promise(function (resolve, reject) {
+        var errors = [];
 
-    var doc = {
-        firstName: validate.firstName(input.firstName, errors),
-        lastName: validate.lastName(input.lastName, errors),
-        emailAddress: validate.lastName(input.emailAddress || input.email, errors),
-        mobileNumber: validate.mobileNumber(input.mobileNumber || input.mobile, errors),
-        password: User.getEncryptedPassword(validate.password(input.password || input.pwd, errors))
-    };
+        var doc = {
+            firstName: validate.firstName(input.firstName, errors),
+            lastName: validate.lastName(input.lastName, errors),
+            emailAddress: validate.emailAddress(input.emailAddress, errors),
+            mobileNumber: validate.mobileNumber(input.mobileNumber, errors),
+            password: User.getEncryptedPassword(validate.password(input.password, errors))
+        };
 
-    if (errors.length > 0) {
-        return { err: errors.toString() };
-    }
-    else {
-        return doc;
-    }
+        if (errors.length > 0) {
+            reject('Validation failed for: ' + errors.toString());
+        }
+        else {
+            resolve(doc);
+        }
+    });
 }
 
 User.getEncryptedPassword = function (password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(8));
 }
 // End: static functions
 
+// Start: Private Functions
+function expiresIn(numDays) {
+    var dateObj = new Date();
+    return dateObj.setDate(dateObj.getDate() + numDays);
+}
+// End: Private Functions
 module.exports = User;

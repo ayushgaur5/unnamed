@@ -1,5 +1,6 @@
 1) Install mongodb
-
+2) Start mongo server using config
+mongod --auth --config mongodb.conf
 mongo --port 27017
 
 use admin

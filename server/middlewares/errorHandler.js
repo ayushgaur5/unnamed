@@ -1,12 +1,7 @@
-function errorHandler(err, req, res, next) {
-    console.error(err.message);
-    if (!err.statusCode) err.statusCode = 500; // Sets a generic server error status code if none is part of the err
+var response = require('../helpers/responseHelper');
 
-    if (err.shouldRedirect) {
-        res.render('myErrorPage') // Renders a myErrorPage.html for the user
-    } else {
-        res.status(err.statusCode).send(err.message); // If shouldRedirect is not defined in our error, sends our original err data
-    }
+function errorHandler(err, req, res, next) {
+    response.failed(res, err.message, err.statusCode || err.status);
 }
 
 module.exports = errorHandler;
