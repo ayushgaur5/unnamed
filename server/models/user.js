@@ -1,6 +1,6 @@
 var validate = require('../helpers/validate');
 var bcrypt = require('bcrypt');
-var jwt = require('jwt-simple');
+var jwt = require('jsonwebtoken');
 
 /**
  * User Document fields:
@@ -22,25 +22,11 @@ var jwt = require('jwt-simple');
 
 function User(userDoc) {
     this.userDoc = userDoc;
-    this.token = this.genToken();
 }
 
 // Start: Object Properties and methods
 User.prototype.validatePassword = function (password) {
     return bcrypt.compareSync(this.doc.encryptedpassword);
-}
-
-User.prototype.genToken = function () {
-    var expires = expiresIn(7); // 7 days
-    var token = jwt.encode({
-        exp: expires
-    }, require('../config/secret')());
-
-    return {
-        token: token,
-        expires: expires,
-        user: this.userDoc
-    };
 }
 // End: Object Properties and methods
 
@@ -51,26 +37,34 @@ User.signIn = (db, doc) => {
             reject('Invalid request, Please send emailAddress/mobileNumber and password to sign in.');
         }
 
+        var filer;
         var projection = { projection: { _id: 0, password: 0 } };
 
         if (doc.emailAddress) {
-            db.collection('users').findOne({ emailAddress: doc.emailAddress }, projection)
-                .then((result) => resolve(new User(result)))
-                .catch((reason) => reject(reason));
+            filter = { emailAddress: doc.emailAddress };
         }
         else if (doc.mobileNumber) {
-            db.collection('users').findOne({ mobileNumber: doc.mobileNumber }, projection)
-                .then((result) => resolve(new User(result)))
-                .catch((reason) => reject(reason));
+            filter = { mobileNumber: doc.mobileNumber };
         }
+        else {
+            reject('Something went wrong');
+        }
+
+        db.collection('users').findOne(filter, projection)
+            .then((result) => {
+                if (result && result.mobileNumber) {
+                    resolve(new User(result));
+                }
+                else { reject('Invalid Credentials'); }
+            })
+            .catch((reason) => reject(reason));
     });
 }
 
 User.signOut = function (input) {
-    if(!doc.mobileNumber) {
+    if (!input.mobileNumber) {
         reject('Invalid request, Please send mobileNumber to sign out.');
     }
-    resolve();
 }
 
 User.create = function (db, userDoc) {
@@ -107,10 +101,4 @@ User.getEncryptedPassword = function (password) {
 }
 // End: static functions
 
-// Start: Private Functions
-function expiresIn(numDays) {
-    var dateObj = new Date();
-    return dateObj.setDate(dateObj.getDate() + numDays);
-}
-// End: Private Functions
 module.exports = User;

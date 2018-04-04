@@ -1,19 +1,13 @@
-var jwt = require('jwt-simple');
-var validateUser = require('../routes/auth').validateUser;
+var User = require('../models/user');
+
+var ValidateRequest = function(req, res, next) {
+  console.log('---Validating Request---');
  
-module.exports = function(req, res, next) {
+  var token = (req.body && req.body.access_token) || req.headers['x-access-token'] || req.headers.authorization;
+  var mobileNumber = req.body.mobileNumber;
  
-  // When performing a cross domain request, you will recieve
-  // a preflighted request first. This is to check if our the app
-  // is safe. 
- 
-  // We skip the token outh for [OPTIONS] requests.
-  if(req.method == 'OPTIONS') next();
- 
-  var token = (req.body && req.body.access_token) || (req.query && req.query.access_token) || req.headers['x-access-token'];
-  var key = (req.body && req.body.x_key) || (req.query && req.query.x_key) || req.headers['x-key'];
- 
-  if (token || key) {
+  if (token) {
+    var decoded = User.validateToken();
     try {
       var decoded = jwt.decode(token, require('../config/secret.js')());
  
@@ -69,3 +63,5 @@ module.exports = function(req, res, next) {
     return;
   }
 };
+
+module.exports = ValidateRequest;

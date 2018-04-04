@@ -1,3 +1,3 @@
 module.exports = function() {
-    return 'TXywwiPAwJGOS9IQjcCe';
+    return  process.env.JWT_SECRET || 'TXywwiPAwJGOS9IQjcCe';
   }
