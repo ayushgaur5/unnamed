@@ -1,6 +1,7 @@
 var validate = require('../helpers/validate');
 var bcrypt = require('bcrypt');
-var jwt = require('jsonwebtoken');
+var constants = require('../constants/');
+var TokenHelper = require('../helpers/tokenHelper');
 
 /**
  * User Document fields:
@@ -24,11 +25,9 @@ function User(userDoc) {
     this.userDoc = userDoc;
 }
 
-// Start: Object Properties and methods
 User.prototype.validatePassword = function (password) {
-    return bcrypt.compareSync(this.doc.encryptedpassword);
+    return bcrypt.compareSync(password, this.userDoc.password);
 }
-// End: Object Properties and methods
 
 // Start: Static functions
 User.signIn = (db, doc) => {
@@ -38,7 +37,7 @@ User.signIn = (db, doc) => {
         }
 
         var filer;
-        var projection = { projection: { _id: 0, password: 0 } };
+        var projection = { projection: { _id: 0 } };
 
         if (doc.emailAddress) {
             filter = { emailAddress: doc.emailAddress };
@@ -50,26 +49,26 @@ User.signIn = (db, doc) => {
             reject('Something went wrong');
         }
 
-        db.collection('users').findOne(filter, projection)
+        db.collection(constants.userCollection).findOne(filter, projection)
             .then((result) => {
                 if (result && result.mobileNumber) {
-                    resolve(new User(result));
+                    var user = new User(result);
+                    if (user.validatePassword(doc.password)) {
+                        TokenHelper.generateToken(user.userDoc)
+                            .then((token) => resolve(token))
+                            .catch((reason) => reject(reason));
+                    }
+                    else reject('Invalid Password');
                 }
-                else { reject('Invalid Credentials'); }
+                else { reject('User not found'); }
             })
             .catch((reason) => reject(reason));
     });
 }
 
-User.signOut = function (input) {
-    if (!input.mobileNumber) {
-        reject('Invalid request, Please send mobileNumber to sign out.');
-    }
-}
-
 User.create = function (db, userDoc) {
     return new Promise(function (resolve, reject) {
-        db.collection('users').insertOne(userDoc)
+        db.collection(constants.userCollection).insertOne(userDoc)
             .then((result) => resolve(result))
             .catch((reason) => reject(reason));
     });
@@ -84,7 +83,9 @@ User.validateAndGenerateDocument = function (input) {
             lastName: validate.lastName(input.lastName, errors),
             emailAddress: validate.emailAddress(input.emailAddress, errors),
             mobileNumber: validate.mobileNumber(input.mobileNumber, errors),
-            password: User.getEncryptedPassword(validate.password(input.password, errors))
+            password: User.getEncryptedPassword(validate.password(input.password, errors)),
+            created_at: Date.now(),
+            updated_at: Date.now()
         };
 
         if (errors.length > 0) {
