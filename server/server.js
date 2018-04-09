@@ -51,17 +51,25 @@ app.use(require('./middlewares/errorHandler'));
 //});
 
 // Establish connection to MongoDB server
-MongoClient.connect(url).then((client) => {
-    console.log("Connected successfully to MongoDB server");
-    require('./helpers/dbHelper').initDb(client)
-        .then((db) => {
-            app.locals.db = db;
-            
-            //new CleanUpCronJob(db).start();
-            
-            // Start server
-            app.listen(config.server.port, function () {
-                console.log('Express server listening on port ' + config.server.port);
-            });
+MongoClient.connect(url)
+    .then((client) => {
+        console.log("Connected successfully to MongoDB server");
+        return require('./helpers/dbHelper').initDb(client)
+    })
+    .then((db) => {
+        console.log("MongoDB initialized")
+        // Other setup
+        app.locals.db = db;
+        new CleanUpCronJob(db).start();
+        var transporter = require('./lib/email/transporter');
+        app.locals.transporter = transporter;
+        return transporter.verify();
+    })
+    .then(() => {
+        console.log("Email service verified");
+        // Start server
+        app.listen(config.server.port, function () {
+            console.log('Express server listening on port ' + config.server.port);
         });
-}).catch((reason) => console.log(reason));
+    })
+    .catch((reason) => console.log(reason));

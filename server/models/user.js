@@ -2,6 +2,7 @@ var validate = require('../helpers/validate');
 var bcrypt = require('bcrypt');
 var constants = require('../constants/');
 var TokenHelper = require('../helpers/tokenHelper');
+var Email = require('../lib/email/index');
 
 /**
  * User Document fields:
@@ -55,12 +56,11 @@ User.signIn = (db, doc) => {
                     var user = new User(result);
                     if (user.validatePassword(doc.password)) {
                         TokenHelper.generateToken(user.userDoc)
-                            .then((token) => resolve(token))
-                            .catch((reason) => reject(reason));
+                            .then((token) => resolve(token));
                     }
                     else reject('Invalid Password');
                 }
-                else { reject('User not found'); }
+                else reject('User not found');
             })
             .catch((reason) => reject(reason));
     });
@@ -83,7 +83,7 @@ User.validateAndGenerateDocument = function (input) {
             lastName: validate.lastName(input.lastName, errors),
             emailAddress: validate.emailAddress(input.emailAddress, errors),
             mobileNumber: validate.mobileNumber(input.mobileNumber, errors),
-            password: User.getEncryptedPassword(validate.password(input.password, errors)),
+            password: getEncryptedPassword(validate.password(input.password, errors)),
             created_at: Date.now(),
             updated_at: Date.now()
         };
@@ -97,9 +97,35 @@ User.validateAndGenerateDocument = function (input) {
     });
 }
 
-User.getEncryptedPassword = function (password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(8));
+User.forgot = function (db, req) {
+    return new Promise(function(resolve, reject){
+        if (!req.body || !req.body.emailAddress) {
+            reject('Email Address not found in the request');
+        }
+
+        var userDoc = {};
+        db.collection(constants.userCollection).findOne({ emailAddress: req.body.emailAddress })
+            .then((result) => {
+                if(!result) reject('Email Address not found');
+                userDoc = result;
+                return TokenHelper.generateToken(result);
+            })
+            .then((token) => {
+                var url = token; // TODO
+                return Email.send(userDoc, 
+                    { template: constants.forgotPasswordTemplate, url: url },
+                    req.app.locals.transporter);
+            })
+            .then((result) => resolve("Password reset email sent successfully."))
+            .catch((reason) => reject(reason));
+    });
 }
 // End: static functions
+
+
+
+var getEncryptedPassword = function (password) {
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(8));
+}
 
 module.exports = User;

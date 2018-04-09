@@ -24,6 +24,12 @@ var auth = {
         TokenHelper.expireToken(req.app.locals.db, req)
             .then(() => response.success(res, 'Signout Successful'))
             .catch((err) => response.failed(res, 'SignOut failed: ' + err));
+    },
+
+    forgot: function (req, res, next) {
+        User.forgot(req.app.locals.db, req)
+            .then(() => response.success(res, 'Email sent'))
+            .catch((reason) => response.failed(res, reason));
     }
 }
 

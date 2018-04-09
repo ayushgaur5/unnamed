@@ -24,6 +24,7 @@
     "jasmine": "^3.1.0",
     "jsonwebtoken": "^8.2.0",
     "mongodb": "^3.0.5",
-    "morgan": "^1.9.0"
+    "morgan": "^1.9.0",
+    "nodemailer": "^4.6.4"
   }
 }

@@ -7,4 +7,6 @@ module.exports = {
     password: 'password',
     expiresDefault: '7d',
     expiredTokenCollection: 'expiredTokens',
+    emailHost: 'localhost',
+    forgotPasswordTemplate: 'forgotPassword'
 }

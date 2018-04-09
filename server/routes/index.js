@@ -11,6 +11,7 @@ var auth = require('./auth.js');
 router.post('/signin', auth.signin);
 router.post('/signup', auth.signup);
 router.post('/signout', auth.signout);
+router.post('/forgot', auth.forgot);
 
 /*
  * Routes that can be accessed only by autheticated users
