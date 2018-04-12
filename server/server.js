@@ -54,19 +54,22 @@ app.use(require('./middlewares/errorHandler'));
 MongoClient.connect(url)
     .then((client) => {
         console.log("Connected successfully to MongoDB server");
-        return require('./helpers/dbHelper').initDb(client)
+        return require('./helpers/dbHelper').initDb(client);
     })
     .then((db) => {
         console.log("MongoDB initialized")
-        // Other setup
+        
+        // Other setups:
         app.locals.db = db;
         new CleanUpCronJob(db).start();
+
         var transporter = require('./lib/email/transporter');
         app.locals.transporter = transporter;
         return transporter.verify();
     })
     .then(() => {
         console.log("Email service verified");
+
         // Start server
         app.listen(config.server.port, function () {
             console.log('Express server listening on port ' + config.server.port);

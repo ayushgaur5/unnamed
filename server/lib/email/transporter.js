@@ -1,17 +1,13 @@
 var nodemailer = require('nodemailer');
 var constants = require('../../constants');
 
-let poolConfig = {
-    pool: true,
-    host: constants.emailHost,
-    port: 465,
-    secure: true, // use TLS
+const transporter = nodemailer.createTransport({
+    host: constants.emailService.host,
+    port: 587,
     auth: {
-        user: 'no-reply',
-        pass: 'password'
+        user: constants.emailService.user,
+        pass: constants.emailService.pass
     }
-};
-
-let transporter = nodemailer.createTransport(poolConfig);
+});
 
 module.exports = transporter;

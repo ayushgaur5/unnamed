@@ -2,7 +2,7 @@ var validate = require('../helpers/validate');
 var bcrypt = require('bcrypt');
 var constants = require('../constants/');
 var TokenHelper = require('../helpers/tokenHelper');
-var Email = require('../lib/email/index');
+var Email = require('../lib/email');
 
 /**
  * User Document fields:
@@ -34,7 +34,7 @@ User.prototype.validatePassword = function (password) {
 User.signIn = (db, doc) => {
     return new Promise(function (resolve, reject) {
         if (!doc.password || (!doc.emailAddress && !doc.mobileNumber)) {
-            reject('Invalid request, Please send emailAddress/mobileNumber and password to sign in.');
+            return reject('Invalid request, Please send emailAddress/mobileNumber and password to sign in.');
         }
 
         var filer;
@@ -47,7 +47,7 @@ User.signIn = (db, doc) => {
             filter = { mobileNumber: doc.mobileNumber };
         }
         else {
-            reject('Something went wrong');
+            return reject('Something went wrong');
         }
 
         db.collection(constants.userCollection).findOne(filter, projection)
@@ -98,31 +98,53 @@ User.validateAndGenerateDocument = function (input) {
 }
 
 User.forgot = function (db, req) {
-    return new Promise(function(resolve, reject){
+    return new Promise(function (resolve, reject) {
         if (!req.body || !req.body.emailAddress) {
-            reject('Email Address not found in the request');
+            return reject('Email Address not found in the request');
         }
 
         var userDoc = {};
         db.collection(constants.userCollection).findOne({ emailAddress: req.body.emailAddress })
             .then((result) => {
-                if(!result) reject('Email Address not found');
+                if (!result) reject('Email Address not found');
                 userDoc = result;
-                return TokenHelper.generateToken(result);
+                return TokenHelper.generateToken(result, '1d');
             })
             .then((token) => {
-                var url = token; // TODO
-                return Email.send(userDoc, 
-                    { template: constants.forgotPasswordTemplate, url: url },
+                var url = 'http://' + req.headers.host + '/forgotPassword?token=' + token;
+                return Email.send(userDoc.emailAddress,
+                    require('../lib/email/templates/forgotPassword')(userDoc, url),
                     req.app.locals.transporter);
             })
             .then((result) => resolve("Password reset email sent successfully."))
             .catch((reason) => reject(reason));
     });
 }
+
+User.resetPassword = function (db, req) {
+    return new Promise(function (resolve, reject) {
+        var token = TokenHelper.getTokenFromRequest(req);
+        var errors = [];
+        validate.password(req.body.newPassword, errors);
+
+        if (!token || !req.body || !req.body.newPassword || errors.length > 0) {
+            return reject('Invalid/Missing Token or New Password or both in the request');
+        }
+
+        TokenHelper.validateToken(req)
+            .then((decoded) => changePassword(db, decoded.mobileNumber, req.body.newPassword))
+            .then((result) => TokenHelper.expireToken(db, req))
+            .then((result) => resolve(result))
+            .catch((reason) => reject(reason));
+    })
+}
 // End: static functions
 
-
+var changePassword = function (db, mobileNumber, newPassword) {
+    return db.collection('users').updateOne(
+        { mobileNumber: mobileNumber },
+        { $set: { password: getEncryptedPassword(newPassword) } });
+}
 
 var getEncryptedPassword = function (password) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8));

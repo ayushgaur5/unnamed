@@ -2,11 +2,11 @@ var jwt = require('jsonwebtoken');
 var secret = require('../config/secret');
 var constants = require('../constants/')
 
-var generateToken = function (user) {
+var generateToken = function (user, expiresIn) {
     return new Promise(function (resolve, reject) {
         var guid = Date.now();
-        var token = jwt.sign({ emailAddress: user.emailAddress, mobileNumber: user.mobileNumber }, secret,
-            { expiresIn: constants.expiresDefault });
+        var token = jwt.sign({ emailAddress: user.emailAddress, mobileNumber: user.mobileNumber },
+            secret, { expiresIn: expiresIn ? expiresIn : constants.expiresDefault });
 
         if (token) {
             return resolve(token);
@@ -17,9 +17,20 @@ var generateToken = function (user) {
     });
 }
 
-var validateToken = function (token) {
-    // Note: This will also validate the expiration.
-    return jwt.verify(token, secret);
+var validateToken = function (req) {
+    return new Promise(function (resolve, reject) {
+        var token = getTokenFromRequest(req);
+
+        if (!token) return reject('Unauthorized Access!');
+
+        var decoded = jwt.verify(token, secret);
+
+        if (!decoded) throw new Error('Invalid token');
+
+        isTokenNotExpired(req.app.locals.db, token)
+            .then(() => resolve(decoded))
+            .catch((reason) => reject(reason));
+    });
 }
 
 var expireToken = function (db, req) {
@@ -48,7 +59,7 @@ var isTokenNotExpired = function (db, token) {
 
 var cleanUpExpiredTokenCollection = async function (db) {
     setTimeout(
-        db.collection(constants.expiredTokenCollection).deleteMany({ created_at: { $lt: Date.now() - 7 * 24 * 60 * 60 * 1000 } }) // to add condition
+        db.collection(constants.expiredTokenCollection).deleteMany({ created_at: { $lt: Date.now() - parseInt(constants.expiresDefault) * 24 * 60 * 60 * 1000 } })
             .then((result) => console.log('Cleaned Up stale data from Expired tokens collection'))
             .catch((reason) => console.log('cleanUpExpiredTokenCollection failed: ' + reason)),
         2000);

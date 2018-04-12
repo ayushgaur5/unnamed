@@ -1,9 +1,11 @@
-var send = function(user, options, transporter) {
+var constants = require('../../constants');
+
+var send = function(emailAddress, htmlBody, transporter) {
     var mailOptions = {
-        from: `"Cook App" <no-reply@${constants.emailHost}>`,
-        to: user.emailAddress,
-        subject: 'Password Reset',
-        html: require(options.template)(user, options.url)
+        from: `"${constants.appName}" <no-reply@${constants.emailService.host}>`,
+        to: emailAddress,
+        subject: constants.appName + ': Password Reset',
+        html: htmlBody
     }
 
     return transporter.sendMail(mailOptions);

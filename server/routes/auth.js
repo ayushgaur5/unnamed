@@ -28,8 +28,20 @@ var auth = {
 
     forgot: function (req, res, next) {
         User.forgot(req.app.locals.db, req)
-            .then(() => response.success(res, 'Email sent'))
-            .catch((reason) => response.failed(res, reason));
+            .then(() => response.success(res, 'Reset password email sent'))
+            .catch((reason) => response.failed(res, 'Forgot Password failed: ' + reason));
+    },
+
+    resetPassword: function (req, res, next) {
+        User.resetPassword(req.app.locals.db, req)
+            .then((result) => response.success(res, 'Password reset successfully', result))
+            .catch((reason) => response.failed(res, 'Password reset failed: ' + reason));
+    },
+
+    validateToken: function (req, res, next) {
+        TokenHelper.validateToken(req)
+            .then((decoded) => response.success(res, 'Valid token'))
+            .catch((reason) => response.failed(res, 'Invalid token: ' + reason));
     }
 }
 

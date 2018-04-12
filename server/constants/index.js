@@ -1,4 +1,5 @@
 module.exports = {
+    appName: "Cook App",
     userCollection: 'users',
     mobileNumber: 'mobileNumber',
     emailAddress: 'emailAddress',
@@ -7,6 +8,9 @@ module.exports = {
     password: 'password',
     expiresDefault: '7d',
     expiredTokenCollection: 'expiredTokens',
-    emailHost: 'localhost',
-    forgotPasswordTemplate: 'forgotPassword'
+    emailService : {
+        host: 'smtp.ethereal.email',
+        user: 'zvu7duuemhhpoawm@ethereal.email',
+        pass: 'c7kNhBNHqF1ku4Df8j'
+    },
 }
